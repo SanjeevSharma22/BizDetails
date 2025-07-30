@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BizDetails AI - Upload</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+  <!-- Header -->
+  <header class="bg-white border-b border-blue-100 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+            <i data-lucide="globe" class="w-6 h-6 text-white"></i>
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">BizDetails AI</h1>
+            <p class="text-xs text-gray-500">Enriching Business Data with AI Precision</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <h2 class="text-3xl font-bold text-gray-900 mb-4">Upload Company Data</h2>
+
+    <div class="bg-white shadow rounded-lg p-6 space-y-6">
+      <!-- Tab Buttons -->
+      <div id="tabs" class="grid grid-cols-3 gap-2">
+        <button data-tab="csv" class="tab-btn px-4 py-2 rounded border text-sm font-medium bg-blue-50">CSV Upload</button>
+        <button data-tab="manual" class="tab-btn px-4 py-2 rounded border text-sm font-medium">Manual Entry</button>
+        <button data-tab="text" class="tab-btn px-4 py-2 rounded border text-sm font-medium">Text Input</button>
+      </div>
+
+      <!-- CSV Upload Tab -->
+      <div id="tab-csv" class="tab-content space-y-6">
+        <div id="csv-dropzone" class="border-2 border-dashed border-blue-300 rounded-lg p-12 text-center cursor-pointer hover:border-blue-400">
+          <i data-lucide="upload" class="w-12 h-12 text-blue-400 mx-auto mb-4"></i>
+          <p class="text-gray-600">Drop your CSV file here or click to browse</p>
+          <input type="file" id="csv-file" accept=".csv" class="hidden" />
+        </div>
+
+        <div id="csv-preview" class="hidden">
+          <div class="overflow-auto border rounded-lg">
+            <table class="min-w-full text-sm">
+              <thead id="csv-head" class="bg-gray-50"></thead>
+              <tbody id="csv-body"></tbody>
+            </table>
+          </div>
+          <p id="csv-more" class="text-xs text-gray-500 mt-2"></p>
+          <button id="csv-continue" class="mt-4 px-4 py-2 text-white rounded bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">Continue</button>
+        </div>
+      </div>
+
+      <!-- Manual Entry Tab -->
+      <div id="tab-manual" class="tab-content hidden space-y-6">
+        <div id="manual-entries"></div>
+        <div class="flex justify-center">
+          <button id="add-entry" class="px-4 py-2 border rounded flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i>Add Another Company</button>
+        </div>
+        <div class="flex justify-center">
+          <button id="manual-continue" class="hidden mt-4 px-4 py-2 text-white rounded bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">Continue</button>
+        </div>
+      </div>
+
+      <!-- Text Input Tab -->
+      <div id="tab-text" class="tab-content hidden space-y-6">
+        <textarea id="text-input" class="w-full border rounded p-3 min-h-[12rem]" placeholder="One company per line\nApple Inc. | Technology company\nAcme Corp - Example context"></textarea>
+        <div id="text-preview" class="hidden">
+          <h3 class="font-medium mb-2">Preview</h3>
+          <div id="text-lines" class="space-y-1 max-h-32 overflow-y-auto text-sm"></div>
+        </div>
+        <div class="flex justify-center">
+          <button id="text-continue" class="hidden mt-4 px-4 py-2 text-white rounded bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">Process</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center py-6 text-sm text-gray-500 border-t border-gray-200">
+    &copy; 2023 BizDetails AI
+  </footer>
+
+  <script>
+    lucide.createIcons();
+
+    // Tab functionality
+    const tabs = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabs.forEach(b => b.classList.remove('bg-blue-50'));
+        btn.classList.add('bg-blue-50');
+        const target = btn.getAttribute('data-tab');
+        tabContents.forEach(c => {
+          if (c.id === 'tab-' + target) c.classList.remove('hidden');
+          else c.classList.add('hidden');
+        });
+      });
+    });
+
+    // CSV upload
+    const dropzone = document.getElementById('csv-dropzone');
+    const fileInput = document.getElementById('csv-file');
+    const preview = document.getElementById('csv-preview');
+    const head = document.getElementById('csv-head');
+    const body = document.getElementById('csv-body');
+    const more = document.getElementById('csv-more');
+    let csvRows = [];
+    function handleFile(file){
+      const reader = new FileReader();
+      reader.onload = e => {
+        const text = e.target.result.trim();
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        if (!lines.length) return;
+        const headers = lines[0].split(',').map(h=>h.replace(/"/g,''));
+        csvRows = lines.slice(1).map(l=>l.split(',').map(v=>v.replace(/"/g,'')));
+        // build table
+        head.innerHTML = '<tr>' + headers.map(h=>`<th class="px-2 py-1 border-b">${h}</th>`).join('') + '</tr>';
+        body.innerHTML = csvRows.slice(0,5).map(r=>'<tr>'+r.map(v=>`<td class="px-2 py-1 border-b">${v||'-'}</td>`).join('')+'</tr>').join('');
+        more.textContent = csvRows.length>5 ? `Showing first 5 of ${csvRows.length} rows` : '';
+        preview.classList.remove('hidden');
+        document.getElementById('csv-continue').classList.remove('hidden');
+        lucide.createIcons();
+      };
+      reader.readAsText(file);
+    }
+    dropzone.addEventListener('click',()=>fileInput.click());
+    dropzone.addEventListener('dragover',e=>{e.preventDefault();dropzone.classList.add('border-blue-400');});
+    dropzone.addEventListener('dragleave',()=>dropzone.classList.remove('border-blue-400'));
+    dropzone.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('border-blue-400'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);});
+    fileInput.addEventListener('change',e=>{ if(fileInput.files[0]) handleFile(fileInput.files[0]);});
+
+    document.getElementById('csv-continue').addEventListener('click',()=>{
+      alert('CSV data ready ('+csvRows.length+' rows)');
+    });
+
+    // Manual entry
+    const manualContainer = document.getElementById('manual-entries');
+    const addBtn = document.getElementById('add-entry');
+    const manualContinue = document.getElementById('manual-continue');
+    let manualCount = 0;
+    function addEntry(data={}){
+      manualCount++;
+      const wrapper = document.createElement('div');
+      wrapper.className='border rounded p-4 space-y-4 mb-4';
+      wrapper.innerHTML=`
+        <div class="flex justify-between items-center">
+          <h3 class="font-medium">Company ${manualCount}</h3>
+          ${manualCount>1 ? '<button class="remove-entry text-red-500" data-index="'+manualCount+'"><i data-lucide="x" class="w-4 h-4"></i></button>' : ''}
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><label class="text-sm">Company Name *</label><input type="text" class="mt-1 w-full border rounded px-2 py-1" data-field="name" value="${data.name||''}"></div>
+          <div><label class="text-sm">Country</label><input type="text" class="mt-1 w-full border rounded px-2 py-1" data-field="country" value="${data.country||''}"></div>
+          <div><label class="text-sm">Industry</label><input type="text" class="mt-1 w-full border rounded px-2 py-1" data-field="industry" value="${data.industry||''}"></div>
+          <div><label class="text-sm">Subindustry</label><input type="text" class="mt-1 w-full border rounded px-2 py-1" data-field="subindustry" value="${data.subindustry||''}"></div>
+          <div><label class="text-sm">Company Size</label><input type="text" class="mt-1 w-full border rounded px-2 py-1" data-field="size" value="${data.size||''}"></div>
+          <div><label class="text-sm">Keywords</label><input type="text" class="mt-1 w-full border rounded px-2 py-1" data-field="keywords" value="${data.keywords||''}"></div>
+          <div class="md:col-span-2"><label class="text-sm">Additional Context</label><textarea class="mt-1 w-full border rounded px-2 py-1" data-field="context">${data.context||''}</textarea></div>
+        </div>`;
+      manualContainer.appendChild(wrapper);
+      lucide.createIcons();
+      updateManualContinue();
+      wrapper.querySelectorAll('input,textarea').forEach(el=>{
+        el.addEventListener('input',updateManualContinue);
+      });
+      const rem = wrapper.querySelector('.remove-entry');
+      if(rem) rem.addEventListener('click',()=>{ wrapper.remove(); updateManualContinue(); });
+    }
+    addEntry();
+    addBtn.addEventListener('click',()=>addEntry());
+    function updateManualContinue(){
+      const hasName=[...manualContainer.querySelectorAll('input[data-field="name"]')].some(i=>i.value.trim());
+      manualContinue.classList.toggle('hidden',!hasName);
+    }
+    manualContinue.addEventListener('click',()=>{
+      const names=[...manualContainer.querySelectorAll('input[data-field="name"]')].map(i=>i.value.trim()).filter(Boolean);
+      alert('Processing '+names.length+' companies');
+    });
+
+    // Text input
+    const textInput=document.getElementById('text-input');
+    const textPreview=document.getElementById('text-preview');
+    const textLines=document.getElementById('text-lines');
+    const textContinue=document.getElementById('text-continue');
+    function updateText(){
+      const lines=textInput.value.split(/\n/).filter(l=>l.trim());
+      textLines.innerHTML=lines.slice(0,10).map(l=>`<div class="px-2 py-0.5 bg-gray-50 rounded">${l}</div>`).join('');
+      textPreview.classList.toggle('hidden',lines.length===0);
+      textContinue.classList.toggle('hidden',lines.length===0);
+      textContinue.textContent='Process '+lines.length+' Companies';
+    }
+    textInput.addEventListener('input',updateText);
+    textContinue.addEventListener('click',()=>{
+      const count=textInput.value.split(/\n/).filter(l=>l.trim()).length;
+      alert('Processing '+count+' companies');
+    });
+
+  </script>
+</body>
+</html>
