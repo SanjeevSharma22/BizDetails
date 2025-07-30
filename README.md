@@ -1,2 +1,0 @@
-# BizDetails
-Companies details
