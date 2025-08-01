@@ -1,0 +1,5 @@
+[build]
+start = "pip install -r requirements.txt"
+
+[deploy]
+start = "python run.py"
